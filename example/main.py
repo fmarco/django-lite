@@ -39,13 +39,6 @@ def test_view(request):
         }
     )
 
-from django.views.generic.list import ListView
-
-class X(ListView):
-    model = app.MODELS['M1']
-
-
-
 
 if __name__ == '__main__':
     app.start()
