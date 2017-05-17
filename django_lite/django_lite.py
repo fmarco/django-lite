@@ -13,15 +13,22 @@ from .services import (
     StaticSettings, TemplateSettings
 )
 from .templates import base_apps
-from .utils import generate_secret_key
+from .utils import generate_secret_key, DJANGO_FIELDS
 
 
 class DjangoLite(object):
+
+    extra_mapping = {
+        'detail_view': ('Detail', DetailView),
+        'list_view': ('List', ListView)
+    }
+
     autoconfigure = True
     config = {}
     configuration = None
     _urlpatterns = []
     MODELS = {}
+    VIEWS = {}
 
     def __init__(self, file_attr, autoconfigure=True, *args, **kwargs):
         self.base_dir = os.path.dirname(os.path.abspath(file_attr))
@@ -82,7 +89,7 @@ class DjangoLite(object):
         self._urlpatterns.append(
             url(*params)
         )
-        print(self._urlpatterns)
+        self.VIEWS[func.__name__] = func
 
     def installed_apps(self, **kwargs):
         if 'override_apps' in kwargs:
@@ -117,6 +124,15 @@ class DjangoLite(object):
             return wrapped_f
         return wrap
 
+    def generate_view(self, cls, view_name):
+        try:
+            view_name, view_parent = self.extra_mapping[view_name]
+            cls_name = cls.__name__
+            view_class_name =  '{0}{1}'.format(cls_name, view_name)
+            return type(view_class_name, (view_parent, ), { 'model': self.MODELS[cls_name]})
+        except KeyError:
+            pass
+
     def model(self, admin=True):
         def wrap(cls):
             attributes = inspect.getmembers(cls, lambda attr:not(inspect.isroutine(attr)))
@@ -130,11 +146,34 @@ class DjangoLite(object):
             )
             setattr(cls, 'objects', self.query(cls.__name__))
             if hasattr(cls, 'Extra'):
-                if hasattr(cls.Extra, 'detail_view'):
-                    detail_view = type(cls.__name__ + 'Detail', (DetailView, ), { 'model': self.MODELS[cls.__name__]})
-                    self.add_view(cls.Extra.base_url + cls.Extra.detail_view, detail_view.as_view())
-                if hasattr(cls.Extra, 'list_view'):
-                    list_view = type(cls.__name__ + 'List', (ListView, ), { 'model': self.MODELS[cls.__name__]})
-                    self.add_view(cls.Extra.base_url + cls.Extra.list_view, list_view.as_view())
+                base_url = ''
+                if hasattr(cls.Extra, 'base_url'):
+                    base_url = cls.Extra.base_url
+                else:
+                    base_url = cls.__name__.lower()
+                for extra in cls.Extra.__dict__.iteritems():
+                    view = self.generate_view(cls, extra[0])
+                    if view is not None:
+                        url = '{0}{1}'.format(base_url, extra[1])
+                        self.add_view(url, view.as_view())
             return cls
         return wrap
+
+    def generate_models(self):
+        yield '# -*- coding:utf-8 -*-'
+        yield 'from django.db import models'
+        yield 'from django.utils.translation import ugettext_lazy as _\n'
+        separator = '    '
+        for k, v in self.MODELS.iteritems():
+            yield 'class {0}(models.Model):'.format(k)
+            fields = v._meta.get_fields()
+            for field in fields:
+                if field.__class__.__name__ in DJANGO_FIELDS:
+                    yield '{0}{1} = models.{2}()'.format(separator, field.name, field.__class__.__name__)
+            yield '\n{0}class Meta:'.format(separator)
+            yield '{0}{1}verbose_name = _(\'{2}\')'.format(separator, separator, k.lower())
+            yield '{0}{1}verbose_name_plural = _(\'{2}s\')'.format(separator, separator, k.lower())
+            yield '\n{0}def __str__(self):'.format(separator)
+            yield '{0}{1}return self.pk'.format(separator, separator)
+            yield '\n'
+

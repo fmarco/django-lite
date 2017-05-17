@@ -13,8 +13,8 @@ class M1(object):
 
     class Extra:
         base_url = r'^m1/'
-        detail_view = r'mostrami/(?P<pk>\d+)/$'
-        list_view = r'listona$'
+        detail_view = r'in_detail/(?P<pk>\d+)/$'
+        list_view = r'listing$'
 
 
 @app.model()

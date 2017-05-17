@@ -31,6 +31,7 @@ FIELD_PROXIES = {
     '1to1': 'OneToOneField'
 }
 
+DJANGO_FIELDS = FIELD_PROXIES.values()
 
 def generate_secret_key():
     chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
