@@ -32,6 +32,12 @@ Quickstart
 Or explore 'example' folder!
 
 
+Commands
+--------
+
+    python path/to/file.py make_models ( > dest_file.py )
+
+
 Tested versions
 --------
 
