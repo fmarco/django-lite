@@ -112,11 +112,14 @@ class DjangoLite(object):
         from django.core.wsgi import get_wsgi_application
         if __name__ == "django_lite.django_lite":
             from django.core.management import execute_from_command_line
-            command = sys.argv[1]
-            if command == 'make_models':
-                for line in self.generate_models():
-                    sys.stdout.write("%s\n" % line)
-                return
+            try:
+                command = sys.argv[1]
+                if command == 'make_models':
+                    for line in self.generate_models():
+                        sys.stdout.write("%s\n" % line)
+                    return
+            except IndexError:
+                pass
             execute_from_command_line(sys.argv)
         else:
             get_wsgi_application()
