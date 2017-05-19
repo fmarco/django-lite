@@ -16,11 +16,25 @@ from .templates import base_apps
 from .utils import generate_secret_key, DJANGO_FIELDS
 
 
+separator = '    '
+header = '# -*- coding:utf-8 -*-'
+
+
+DJ_CLASSES = [ DetailView, ListView ]
+
+
 class DjangoLite(object):
 
     extra_mapping = {
         'detail_view': ('Detail', DetailView),
         'list_view': ('List', ListView)
+    }
+
+    commands = {
+        'make_models': 'generate_models',
+        'make_urls': 'generate_urls',
+        'make_views': 'generate_views',
+        'make_settings': 'generate_settings'
     }
 
     autoconfigure = True
@@ -114,8 +128,9 @@ class DjangoLite(object):
             from django.core.management import execute_from_command_line
             try:
                 command = sys.argv[1]
-                if command == 'make_models':
-                    for line in self.generate_models():
+                if command in self.commands.keys():
+                    cmd = getattr(self, self.commands.get(command))
+                    for line in cmd():
                         sys.stdout.write("%s\n" % line)
                     return
             except IndexError:
@@ -168,10 +183,9 @@ class DjangoLite(object):
         return wrap
 
     def generate_models(self):
-        yield '# -*- coding:utf-8 -*-'
+        yield header
         yield 'from django.db import models'
         yield 'from django.utils.translation import ugettext_lazy as _\n'
-        separator = '    '
         for k, v in self.MODELS.iteritems():
             yield 'class {0}(models.Model):'.format(k)
             fields = v._meta.get_fields()
@@ -185,3 +199,54 @@ class DjangoLite(object):
             yield '{0}{1}return self.pk'.format(separator, separator)
             yield '\n'
 
+    def generate_urls(self):
+        from django.core.urlresolvers import RegexURLResolver
+        patterns = []
+        for url in self.urlpatterns:
+            if isinstance(url, RegexURLResolver):
+                if url.app_name == 'admin':
+                    str_pattern = '{0}url(r\'^admin/\', include(admin.site.urls)),'.format(separator)
+                    patterns.append(str_pattern)
+            else:
+                if 'static' not in url.regex.pattern:
+                    str_pattern = '{0}url(r\'{1}\', views.{2}),'.format(separator, url.regex.pattern, url.callback.__name__)
+                    patterns.append(str_pattern)
+        yield header
+        yield 'from django.conf.urls import url'
+        yield 'from django.contrib.staticfiles.urls import staticfiles_urlpatterns'
+        yield ''
+        yield 'from . import views\n'
+        yield 'urlpatterns = ['
+        for url in patterns:
+            yield url
+        yield '] + staticfiles_urlpatterns()\n'
+
+    def generate_views(self):
+        yield header
+        declarations = []
+        details = 0
+        lists = 0
+        for k, f in self.VIEWS.iteritems():
+            if hasattr(f, 'view_class'):
+                cls = f.view_class
+                cls_str = ''
+                for dj_class in DJ_CLASSES:
+                    if issubclass(cls, dj_class):
+                        details += 1
+                        cls_str = 'class {0}({1}):'.format(cls.__name__, dj_class.__name__)
+                        cls_str += '\n{0}model={1}'.format(separator, cls.model.__name__)
+                        declarations.append(cls_str)
+            else:
+                declarations.append(inspect.getsource(f))
+        if details > 0:
+            yield 'from django.views.generic.detail import DetailView'
+        if lists > 0:
+            yield 'from django.views.generic.list import ListView'
+        for declaration in declarations:
+            yield '\n'
+            yield declaration
+
+    def generate_settings(self):
+        for k, v in settings._wrapped.__dict__.iteritems():
+            pass
+        yield 'TODO'
