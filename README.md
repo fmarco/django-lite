@@ -37,6 +37,12 @@ Commands
 
     python path/to/file.py make_models ( > dest_file.py )
 
+    python path/to/file.py make_views ( > dest_file.py )
+
+    python path/to/file.py make_urls ( > dest_file.py )
+
+    python path/to/file.py make_settings ( > dest_file.py ) [WIP]
+
 
 Tested versions
 --------
