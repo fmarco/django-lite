@@ -247,6 +247,9 @@ class DjangoLite(object):
             yield declaration
 
     def generate_settings(self):
+        yield header
         for k, v in settings._wrapped.__dict__.iteritems():
-            pass
-        yield 'TODO'
+            try:
+                yield '{0} = {1}'.format(k, json.dumps(settings._wrapped.__dict__[k]))
+            except TypeError:
+                pass
