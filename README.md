@@ -1,5 +1,9 @@
 django-lite
 ===============
+[![PyPI](https://img.shields.io/pypi/pyversions/django-lite.svg)](https://pypi.python.org/pypi/django-lite/)
+[![PyPI](https://img.shields.io/pypi/l/django-lite.svg)](https://pypi.python.org/pypi/django-lite/)
+[![Latest Version](https://img.shields.io/pypi/v/django-lite.svg)](https://pypi.python.org/pypi/django-lite/)
+[![PyPI](https://img.shields.io/pypi/dm/django-lite.svg)](https://pypi.python.org/pypi/django-lite/)
 
 A simple lightweight version of Django
 
@@ -7,6 +11,12 @@ Why?
 --------
 
 To make simple setup little web app or testing or simply to make some experiments with the framework.
+
+
+Installation
+--------
+
+    pip install django-lite
 
 
 Quickstart
