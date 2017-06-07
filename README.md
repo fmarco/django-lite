@@ -23,6 +23,7 @@ Quickstart
 --------
 
     from django_lite.django_lite import DjangoLite
+    from django_lite.utils char
 
     app = DjangoLite(__file__)
 
