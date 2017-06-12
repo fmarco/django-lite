@@ -16,8 +16,8 @@ class M1(object):
         detail_view = r'in_detail/(?P<pk>\d+)/$'
         list_view = r'listing$'
         create_view = r'create$'
-        delete_view = r'destroy$'
-        update_view = r'update$'
+        delete_view = r'destroy/(?P<pk>\d+)/$'
+        update_view = r'update/(?P<pk>\d+)/$'
 
 
 @app.model()
