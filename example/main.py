@@ -15,6 +15,9 @@ class M1(object):
         base_url = r'^m1/'
         detail_view = r'in_detail/(?P<pk>\d+)/$'
         list_view = r'listing$'
+        create_view = r'create$'
+        delete_view = r'destroy$'
+        update_view = r'update$'
 
 
 @app.model()
