@@ -171,7 +171,7 @@ class DjangoLite(object):
         except KeyError:
             pass
 
-    def model(self, admin=True):
+    def model(self, admin=True, crud=False):
         def wrap(cls):
             attributes = inspect.getmembers(cls, lambda attr:not(inspect.isroutine(attr)))
             attrs = dict([attr for attr in attributes if not(attr[0].startswith('__') and attr[0].endswith('__'))])
@@ -183,6 +183,7 @@ class DjangoLite(object):
                 }
             )
             setattr(cls, 'objects', self.query(cls.__name__))
+            generated_views = []
             if hasattr(cls, 'Extra'):
                 base_url = ''
                 if hasattr(cls.Extra, 'base_url'):
@@ -192,9 +193,24 @@ class DjangoLite(object):
                 for extra in cls.Extra.__dict__.iteritems():
                     view = self.generate_view(cls, extra[0])
                     if view is not None:
+                        generated_views.append(extra[0])
                         view_name = '{0}_{1}'.format(cls.__name__.lower(), extra[0])
                         url = '{0}{1}'.format(base_url, extra[1])
                         self.add_view(url, view.as_view(), view_name)
+            else:
+                base_url = cls.__name__.lower()
+            if crud:
+                crud_views = set(self.extra_mapping.keys())
+                remaining = crud_views - set(generated_views)
+                for new_view in remaining:
+                    view = self.generate_view(cls, new_view)
+                    view_name = '{0}_{1}'.format(cls.__name__.lower(), new_view)
+                    view_info = self.extra_mapping[new_view]
+                    url_suffix = view_info[0].lower()
+                    url = '^{0}/{1}'.format(base_url, url_suffix)
+                    if view_info[2] or new_view == 'delete_view':
+                        url = '{0}/{1}$'.format(url, '(?P<pk>\d+)')
+                    self.add_view(url, view.as_view(), view_name)
             return cls
         return wrap
 

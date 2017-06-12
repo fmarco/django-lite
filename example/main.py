@@ -20,7 +20,7 @@ class M1(object):
         update_view = r'update/(?P<pk>\d+)/$'
 
 
-@app.model()
+@app.model(crud=True)
 class M2(object):
     x = integer()
 
