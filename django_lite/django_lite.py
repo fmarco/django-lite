@@ -105,16 +105,15 @@ class DjangoLite(object):
 
     def new_model(self, *args, **kwargs):
         model = ModelFactory.create(self.app_label, __name__, *args, **kwargs)
-        setattr(model, 'get_absolute_url', generate_get_absolute_url(self.app_label))
+        setattr(model, 'get_absolute_url', generate_get_absolute_url(model.__name__.lower()))
         self.MODELS[model.__name__] = model
-
 
     def add_view(self, url_pattern, func, name=None):
         params = [url_pattern, func]
-        if name is not None:
-            params.append(name)
+        if name is None:
+            name = func.__name__
         self._urlpatterns.append(
-            url(*params)
+            url(*params, name=name)
         )
         self.VIEWS[func.__name__] = func
 
@@ -193,8 +192,9 @@ class DjangoLite(object):
                 for extra in cls.Extra.__dict__.iteritems():
                     view = self.generate_view(cls, extra[0])
                     if view is not None:
+                        view_name = '{0}_{1}'.format(cls.__name__.lower(), extra[0])
                         url = '{0}{1}'.format(base_url, extra[1])
-                        self.add_view(url, view.as_view())
+                        self.add_view(url, view.as_view(), view_name)
             return cls
         return wrap
 

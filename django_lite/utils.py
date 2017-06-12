@@ -58,5 +58,5 @@ for proxy_name in FIELD_PROXIES.keys():
 
 def generate_get_absolute_url(prefix):
     def get_absolute_url(self):
-            return reverse('{0}-detail'.format(prefix), kwargs={'pk': self.pk})
+            return reverse('{0}_detail_view'.format(prefix), kwargs={'pk': self.pk})
     return get_absolute_url
