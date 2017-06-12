@@ -1,13 +1,13 @@
 # -*- coding:utf-8 -*-
 from django_lite.django_lite import DjangoLite
-from django_lite.utils import bigint, char, fk, m2m
+from django_lite.utils import integer, char, fk, m2m
 
 app = DjangoLite(__file__)
 
 
 @app.model()
 class M1(object):
-    x = bigint(max_length=10)
+    x = integer()
     y = char(max_length=255)
     z = fk('M2')
 
@@ -22,7 +22,7 @@ class M1(object):
 
 @app.model()
 class M2(object):
-    x = bigint(max_length=10)
+    x = integer()
 
 
 @app.model()

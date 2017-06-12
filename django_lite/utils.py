@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 import sys
 from django.db import models
+from django.urls import reverse
 from django.utils.crypto import get_random_string
 
 
@@ -53,3 +54,9 @@ class FieldStub(object):
 
 for proxy_name in FIELD_PROXIES.keys():
     setattr(sys.modules[__name__], proxy_name ,type(proxy_name, (FieldStub,), {})())
+
+
+def generate_get_absolute_url(prefix):
+    def get_absolute_url(self):
+            return reverse('{0}-detail'.format(prefix), kwargs={'pk': self.pk})
+    return get_absolute_url

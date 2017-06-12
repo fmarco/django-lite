@@ -14,7 +14,7 @@ from .services import (
     StaticSettings, TemplateSettings
 )
 from .templates import base_apps
-from .utils import generate_secret_key, DJANGO_FIELDS
+from .utils import generate_secret_key, generate_get_absolute_url, DJANGO_FIELDS
 
 
 separator = '    '
@@ -105,6 +105,7 @@ class DjangoLite(object):
 
     def new_model(self, *args, **kwargs):
         model = ModelFactory.create(self.app_label, __name__, *args, **kwargs)
+        setattr(model, 'get_absolute_url', generate_get_absolute_url(self.app_label))
         self.MODELS[model.__name__] = model
 
 
