@@ -35,11 +35,11 @@ DJ_CLASSES_IMPORT = {
 class DjangoLite(object):
 
     extra_mapping = {
-        'detail_view': ('Detail', DetailView),
-        'list_view': ('List', ListView),
-        'create_view': ('Create', CreateView),
-        'delete_view': ('Delete', DeleteView),
-        'update_view': ('Update', UpdateView)
+        'detail_view': ('Detail', DetailView, False),
+        'list_view': ('List', ListView, False),
+        'create_view': ('Create', CreateView, True),
+        'delete_view': ('Delete', DeleteView, False),
+        'update_view': ('Update', UpdateView, True)
     }
 
     commands = {
@@ -161,10 +161,13 @@ class DjangoLite(object):
 
     def generate_view(self, cls, view_name):
         try:
-            view_name, view_parent = self.extra_mapping[view_name]
+            view_name, view_parent, edit = self.extra_mapping[view_name]
             cls_name = cls.__name__
             view_class_name =  '{0}{1}'.format(cls_name, view_name)
-            return type(view_class_name, (view_parent, ), { 'model': self.MODELS[cls_name]})
+            data = { 'model': self.MODELS[cls_name]}
+            if edit:
+                data['fields'] = '__all__'
+            return type(view_class_name, (view_parent, ), data)
         except KeyError:
             pass
 
