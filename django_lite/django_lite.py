@@ -6,6 +6,7 @@ from django.conf.urls import include, url
 from django.contrib import admin
 from django.db import models
 from django.views.generic.detail import DetailView
+from django.views.generic.edit import CreateView, DeleteView, UpdateView
 from django.views.generic.list import ListView
 
 from .services import (
@@ -20,14 +21,25 @@ separator = '    '
 header = '# -*- coding:utf-8 -*-'
 
 
-DJ_CLASSES = [ DetailView, ListView ]
+DJ_CLASSES = [ CreateView, DeleteView, DetailView, ListView, UpdateView ]
+
+DJ_CLASSES_IMPORT = {
+    'CreateView': 'from django.views.generic.edit import CreateView',
+    'UpdateView': 'from django.views.generic.edit import UpdateView',
+    'DeleteView': 'from django.views.generic.edit import DeleteView',
+    'DetailView': 'from django.views.generic.detail import DetailView',
+    'ListView': 'from django.views.generic.list import ListView'
+}
 
 
 class DjangoLite(object):
 
     extra_mapping = {
         'detail_view': ('Detail', DetailView),
-        'list_view': ('List', ListView)
+        'list_view': ('List', ListView),
+        'create_view': ('Create', CreateView),
+        'delete_view': ('Delete', DeleteView),
+        'update_view': ('Update', UpdateView)
     }
 
     commands = {
@@ -224,24 +236,26 @@ class DjangoLite(object):
     def generate_views(self):
         yield header
         declarations = []
-        details = 0
-        lists = 0
+        counters = {}
         for k, f in self.VIEWS.iteritems():
             if hasattr(f, 'view_class'):
                 cls = f.view_class
                 cls_str = ''
                 for dj_class in DJ_CLASSES:
                     if issubclass(cls, dj_class):
-                        details += 1
+                        dj_class_name = dj_class.__name__
+                        try:
+                            counters[dj_class_name] += 1
+                        except KeyError:
+                            counters[dj_class_name] = 1
                         cls_str = 'class {0}({1}):'.format(cls.__name__, dj_class.__name__)
                         cls_str += '\n{0}model={1}'.format(separator, cls.model.__name__)
                         declarations.append(cls_str)
             else:
                 declarations.append(inspect.getsource(f))
-        if details > 0:
-            yield 'from django.views.generic.detail import DetailView'
-        if lists > 0:
-            yield 'from django.views.generic.list import ListView'
+        for import_str, count in counters.iteritems():
+            if count > 0:
+                yield DJ_CLASSES_IMPORT[import_str]
         for declaration in declarations:
             yield '\n'
             yield declaration
