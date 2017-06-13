@@ -19,6 +19,7 @@ from .utils import generate_secret_key, generate_get_absolute_url, DJANGO_FIELDS
 
 separator = '    '
 header = '# -*- coding:utf-8 -*-'
+slug_regex = '(?P<pk>\d+)'
 
 
 DJ_CLASSES = [ CreateView, DeleteView, DetailView, ListView, UpdateView ]
@@ -209,7 +210,7 @@ class DjangoLite(object):
                     url_suffix = view_info[0].lower()
                     url = '^{0}/{1}'.format(base_url, url_suffix)
                     if view_info[2] or new_view == 'delete_view':
-                        url = '{0}/{1}$'.format(url, '(?P<pk>\d+)')
+                        url = '{0}/{1}$'.format(url, slug_regex)
                     self.add_view(url, view.as_view(), view_name)
             return cls
         return wrap
