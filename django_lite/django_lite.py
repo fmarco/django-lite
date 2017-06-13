@@ -6,6 +6,7 @@ from django.conf.urls import include, url
 from django.contrib import admin
 from django.db import models
 from django.views.generic.detail import DetailView
+from django.views.generic.edit import CreateView, DeleteView, UpdateView
 from django.views.generic.list import ListView
 
 from .services import (
@@ -13,21 +14,33 @@ from .services import (
     StaticSettings, TemplateSettings
 )
 from .templates import base_apps
-from .utils import generate_secret_key, DJANGO_FIELDS
+from .utils import generate_secret_key, generate_get_absolute_url, DJANGO_FIELDS
 
 
 separator = '    '
 header = '# -*- coding:utf-8 -*-'
+slug_regex = '(?P<pk>\d+)'
 
 
-DJ_CLASSES = [ DetailView, ListView ]
+DJ_CLASSES = [ CreateView, DeleteView, DetailView, ListView, UpdateView ]
+
+DJ_CLASSES_IMPORT = {
+    'CreateView': 'from django.views.generic.edit import CreateView',
+    'UpdateView': 'from django.views.generic.edit import UpdateView',
+    'DeleteView': 'from django.views.generic.edit import DeleteView',
+    'DetailView': 'from django.views.generic.detail import DetailView',
+    'ListView': 'from django.views.generic.list import ListView'
+}
 
 
 class DjangoLite(object):
 
     extra_mapping = {
-        'detail_view': ('Detail', DetailView),
-        'list_view': ('List', ListView)
+        'detail_view': ('Detail', DetailView, False),
+        'list_view': ('List', ListView, False),
+        'create_view': ('Create', CreateView, True),
+        'delete_view': ('Delete', DeleteView, False),
+        'update_view': ('Update', UpdateView, True)
     }
 
     commands = {
@@ -93,15 +106,15 @@ class DjangoLite(object):
 
     def new_model(self, *args, **kwargs):
         model = ModelFactory.create(self.app_label, __name__, *args, **kwargs)
+        setattr(model, 'get_absolute_url', generate_get_absolute_url(model.__name__.lower()))
         self.MODELS[model.__name__] = model
-
 
     def add_view(self, url_pattern, func, name=None):
         params = [url_pattern, func]
-        if name is not None:
-            params.append(name)
+        if name is None:
+            name = func.__name__
         self._urlpatterns.append(
-            url(*params)
+            url(*params, name=name)
         )
         self.VIEWS[func.__name__] = func
 
@@ -149,14 +162,17 @@ class DjangoLite(object):
 
     def generate_view(self, cls, view_name):
         try:
-            view_name, view_parent = self.extra_mapping[view_name]
+            view_name, view_parent, edit = self.extra_mapping[view_name]
             cls_name = cls.__name__
             view_class_name =  '{0}{1}'.format(cls_name, view_name)
-            return type(view_class_name, (view_parent, ), { 'model': self.MODELS[cls_name]})
+            data = { 'model': self.MODELS[cls_name]}
+            if edit:
+                data['fields'] = '__all__'
+            return type(view_class_name, (view_parent, ), data)
         except KeyError:
             pass
 
-    def model(self, admin=True):
+    def model(self, admin=True, crud=False):
         def wrap(cls):
             attributes = inspect.getmembers(cls, lambda attr:not(inspect.isroutine(attr)))
             attrs = dict([attr for attr in attributes if not(attr[0].startswith('__') and attr[0].endswith('__'))])
@@ -168,6 +184,7 @@ class DjangoLite(object):
                 }
             )
             setattr(cls, 'objects', self.query(cls.__name__))
+            generated_views = []
             if hasattr(cls, 'Extra'):
                 base_url = ''
                 if hasattr(cls.Extra, 'base_url'):
@@ -177,8 +194,24 @@ class DjangoLite(object):
                 for extra in cls.Extra.__dict__.iteritems():
                     view = self.generate_view(cls, extra[0])
                     if view is not None:
+                        generated_views.append(extra[0])
+                        view_name = '{0}_{1}'.format(cls.__name__.lower(), extra[0])
                         url = '{0}{1}'.format(base_url, extra[1])
-                        self.add_view(url, view.as_view())
+                        self.add_view(url, view.as_view(), view_name)
+            else:
+                base_url = cls.__name__.lower()
+            if crud:
+                crud_views = set(self.extra_mapping.keys())
+                remaining = crud_views - set(generated_views)
+                for new_view in remaining:
+                    view = self.generate_view(cls, new_view)
+                    view_name = '{0}_{1}'.format(cls.__name__.lower(), new_view)
+                    view_info = self.extra_mapping[new_view]
+                    url_suffix = view_info[0].lower()
+                    url = '^{0}/{1}'.format(base_url, url_suffix)
+                    if view_info[2] or new_view == 'delete_view':
+                        url = '{0}/{1}$'.format(url, slug_regex)
+                    self.add_view(url, view.as_view(), view_name)
             return cls
         return wrap
 
@@ -224,24 +257,26 @@ class DjangoLite(object):
     def generate_views(self):
         yield header
         declarations = []
-        details = 0
-        lists = 0
+        counters = {}
         for k, f in self.VIEWS.iteritems():
             if hasattr(f, 'view_class'):
                 cls = f.view_class
                 cls_str = ''
                 for dj_class in DJ_CLASSES:
                     if issubclass(cls, dj_class):
-                        details += 1
+                        dj_class_name = dj_class.__name__
+                        try:
+                            counters[dj_class_name] += 1
+                        except KeyError:
+                            counters[dj_class_name] = 1
                         cls_str = 'class {0}({1}):'.format(cls.__name__, dj_class.__name__)
                         cls_str += '\n{0}model={1}'.format(separator, cls.model.__name__)
                         declarations.append(cls_str)
             else:
                 declarations.append(inspect.getsource(f))
-        if details > 0:
-            yield 'from django.views.generic.detail import DetailView'
-        if lists > 0:
-            yield 'from django.views.generic.list import ListView'
+        for import_str, count in counters.iteritems():
+            if count > 0:
+                yield DJ_CLASSES_IMPORT[import_str]
         for declaration in declarations:
             yield '\n'
             yield declaration

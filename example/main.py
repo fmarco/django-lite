@@ -1,13 +1,13 @@
 # -*- coding:utf-8 -*-
 from django_lite.django_lite import DjangoLite
-from django_lite.utils import bigint, char, fk, m2m
+from django_lite.utils import integer, char, fk, m2m
 
 app = DjangoLite(__file__)
 
 
 @app.model()
 class M1(object):
-    x = bigint(max_length=10)
+    x = integer()
     y = char(max_length=255)
     z = fk('M2')
 
@@ -15,11 +15,14 @@ class M1(object):
         base_url = r'^m1/'
         detail_view = r'in_detail/(?P<pk>\d+)/$'
         list_view = r'listing$'
+        create_view = r'create$'
+        delete_view = r'destroy/(?P<pk>\d+)/$'
+        update_view = r'update/(?P<pk>\d+)/$'
 
 
-@app.model()
+@app.model(crud=True)
 class M2(object):
-    x = bigint(max_length=10)
+    x = integer()
 
 
 @app.model()

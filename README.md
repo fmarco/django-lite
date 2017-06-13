@@ -43,6 +43,20 @@ Quickstart
 Or explore 'example' folder!
 
 
+Decorators (methods on class DjangoLite)
+--------
+
+* django_lite.django_lite.DjangoLite.route
+    - arguments:
+        - url_pattern: string / Regex for urlpattern
+        - name: string (default=None) / view name
+
+* django_lite.django_lite.DjangoLite.model
+    - arguments:
+        - admin: boolean (default=True) / create an admin class for the created model
+        - crud: boolean (default=False) / create a view for every CRUD operation
+
+
 Commands
 --------
 
